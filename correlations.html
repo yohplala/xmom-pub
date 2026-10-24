@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Asset registry — correlation matrix</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <style>
+    :root {
+      --bg: #0e1116; --panel: #161b22; --border: #30363d;
+      --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff;
+      --positive: #3fb950; --negative: #f85149;
+    }
+    html, body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      margin: 0; padding: 0;
+    }
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 4px 0; font-size: 28px; text-align: center; }
+    h2 { margin: 32px 0 12px 0; font-size: 20px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .subtitle { color: var(--muted); margin-bottom: 24px; font-size: 13px; text-align: center; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 6px; padding: 16px; margin-bottom: 16px;
+    }
+    .heatmap { height: 800px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+    td.numeric { text-align: right; font-variant-numeric: tabular-nums; }
+    /* Redundancy-groups table: centre everything by default; "All members"
+       (a wide chip-list cell) keeps the natural left alignment so the
+       chips read left-to-right. */
+    table.redundancy th, table.redundancy td { text-align: center; }
+    table.redundancy td.members, table.redundancy th.members { text-align: left; }
+    .pill {
+      display: inline-block; background: rgba(88, 166, 255, 0.15); color: var(--accent);
+      padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;
+    }
+    .pill.rep { background: rgba(63, 185, 80, 0.18); color: var(--positive); }
+    .pill.remove { background: rgba(248, 81, 73, 0.18); color: var(--negative); }
+    .pill.replace { background: rgba(210, 153, 34, 0.18); color: #d29922; }
+    .members { color: var(--muted); font-size: 12px; }
+    nav {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 24px 0;
+    }
+    nav a, nav .nav-current {
+      display: inline-block;
+      padding: 8px 18px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    nav a { color: var(--accent); }
+    nav a:hover { background: var(--bg); border-color: var(--accent); }
+    nav .nav-current {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+      cursor: default;
+    }
+    .pill a { color: inherit; text-decoration: none; }
+    .pill a:hover { text-decoration: underline; }
+    footer { margin-top: 48px; color: var(--muted); font-size: 12px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Asset registry — correlation matrix</h1>
+    <div class="subtitle">
+      41 assets · pairwise Pearson correlation of daily returns over the
+      trailing 252 business days · last update 2026-10-24 01:10 UTC
+    </div>
+    <nav>
+          <a href="index.html">Strategies</a>
+          <a href="us.html">US</a>
+          <a href="latam.html">LatAm</a>
+          <a href="europe.html">EMEA</a>
+          <a href="asia.html">Asia</a>
+          <a href="world.html">World</a>
+          <a href="sov.html">Store of Value</a>
+          <span class="nav-current">Correlation</span>
+    </nav>
+
+    <h2>Correlation heatmap</h2>
+    <div class="panel">
+      <div id="heatmap" class="heatmap"></div>
+      <p style="color: var(--muted); font-size: 12px; margin-top: 12px;">
+        Triangular display (lower triangle). Red = highly correlated (≈ 0.95+); dark
+        background ≈ uncorrelated; amber = high but not redundant (~0.7-0.9); blue =
+        inversely correlated. Hover over a cell to see the exact value.
+      </p>
+    </div>
+
+    <h2>Redundancy groups (correlation > 0.90)</h2>
+    <div class="panel">
+      
+      <table class="redundancy">
+        <thead>
+          <tr>
+            <th>Group size</th>
+            <th>Lowest-TER<br>member</th>
+            <th>TER (%)</th>
+            <th class="members">All members</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr>
+            <td>7</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-core-euro-stoxx-50-ucits-etf-eur-acc/lu1681047236" target="_blank" rel="noopener">eurostoxx50</a></span>
+              
+            </td>
+            <td>0.09</td>
+            <td class="members">
+              <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-msci-europe-ucits-etf-acc/fr0013412038" target="_blank" rel="noopener">msci_europe</a></span> <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-euro-stoxx-50-ii-ucits-etf-acc/fr0007054358" target="_blank" rel="noopener">emu_ii_acc</a></span> <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-core-msci-emu-ucits-etf-dist/lu1646360971" target="_blank" rel="noopener">emu_msci_emu_dist</a></span> <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-core-msci-emu-ucits-etf-acc/lu1646361276" target="_blank" rel="noopener">emu_msci_emu_acc</a></span> <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-msci-emu-esg-selection-ucits-etf-dr-eur-c/lu1602144575" target="_blank" rel="noopener">emu_esg_select_acc</a></span> <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-msci-emu-esg-broad-transition-ucits-etf-acc/lu0908501058" target="_blank" rel="noopener">emu_esg_broad_acc</a></span> 
+              
+            </td>
+          </tr>
+          
+          <tr>
+            <td>4</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-sp-500-ucits-etf-acc/fr0011871128" target="_blank" rel="noopener">sp500</a></span>
+              
+            </td>
+            <td>0.12</td>
+            <td class="members">
+              <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-sp-500-screened-ucits-etf-acc/fr0013412285" target="_blank" rel="noopener">sp500_screened</a></span> <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-msci-usa-esg-selection-ucits-etf-eur/lu1681042864" target="_blank" rel="noopener">us_msci_esg</a></span> <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-nasdaq100-ucits-etf-acc/fr0011871110" target="_blank" rel="noopener">us_pea_nasdaq</a></span> 
+              
+            </td>
+          </tr>
+          
+          <tr>
+            <td>3</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-italy-mib-esg-ucits-etf-dr-eur-c/lu1681037518" target="_blank" rel="noopener">it_mib_esg</a></span>
+              
+            </td>
+            <td>0.18</td>
+            <td class="members">
+              <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-ftse-mib-ucits-etf-dist/fr0010010827" target="_blank" rel="noopener">it_ftse_mib_dist</a></span> <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-ftse-mib-ucits-etf-acc/fr0014002h76" target="_blank" rel="noopener">it_ftse_mib_acc</a></span> 
+              
+            </td>
+          </tr>
+          
+          <tr>
+            <td>2</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-cac-40-ucits-etf-dist/fr0007052782" target="_blank" rel="noopener">fr_cac40_dist</a></span>
+              
+            </td>
+            <td>0.25</td>
+            <td class="members">
+              <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-cac-40-ucits-etf-acc/fr0013380607" target="_blank" rel="noopener">fr_cac40_acc</a></span> 
+              
+            </td>
+          </tr>
+          
+          <tr>
+            <td>2</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-sp-500-ucits-etf-eur-hedged-acc/fr0011871136" target="_blank" rel="noopener">sp500_hedged</a></span>
+              
+            </td>
+            <td>0.12</td>
+            <td class="members">
+              <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-sp-500-screened-ucits-etf-eur-hedged-acc/fr0013412293" target="_blank" rel="noopener">sp500_scr_hed</a></span> 
+              
+            </td>
+          </tr>
+          
+          <tr>
+            <td>2</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-japon-topix-ucits-etf-eur-acc/fr0013411980" target="_blank" rel="noopener">topix</a></span>
+              
+            </td>
+            <td>0.20</td>
+            <td class="members">
+              <span class="pill"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-etf-pea-japan-topix-ucits-etf-daily-hedged-eur/fr0013411998" target="_blank" rel="noopener">topix_hedged</a></span> 
+              
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/lyxor-pea-asie-pacifique-msci-ac-asia-pacific-ex-japan-ucits-etf-capi/fr0011869312" target="_blank" rel="noopener">ap_asia_pacific</a></span>
+              
+            </td>
+            <td>0.60</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/fixed-income/amundi-pea-euro-court-terme-ucits-etf-acc/fr0013346681" target="_blank" rel="noopener">cash_estr</a></span>
+              
+            </td>
+            <td>0.25</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-chine-msci-china-screened-ucits-etf-acc/fr0011871078" target="_blank" rel="noopener">cn_pea_china</a></span>
+              
+            </td>
+            <td>0.65</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-etf-dax-ucits-etf-dr/fr0010655712" target="_blank" rel="noopener">de_dax_dr</a></span>
+              
+            </td>
+            <td>0.10</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-asie-emergente-msci-emerging-asia-screened-ucits-etf-acc/fr0013412012" target="_blank" rel="noopener">em_asia</a></span>
+              
+            </td>
+            <td>0.30</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-msci-emerging-latin-america-selection-ucits-etf-acc/fr0013412004" target="_blank" rel="noopener">em_latam</a></span>
+              
+            </td>
+            <td>0.30</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-emergent-msci-emerging-esg-transition-ucits-etf-acc/fr0013412020" target="_blank" rel="noopener">em_pea_emerging</a></span>
+              
+            </td>
+            <td>0.30</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-msci-emu-high-dividend-ucits-etf-acc/fr0010717090" target="_blank" rel="noopener">emu_high_div</a></span>
+              
+            </td>
+            <td>0.30</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-msci-emu-small-cap-esg-broad-transition-ucits-etf-dist/lu1598689153" target="_blank" rel="noopener">emu_small</a></span>
+              
+            </td>
+            <td>0.40</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-ibex-35-ucits-etf-acc/fr0010655746" target="_blank" rel="noopener">es_ibex_acc</a></span>
+              
+            </td>
+            <td>0.30</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-stoxx-europe-600-banks-ucits-etf-acc/lu1834983477" target="_blank" rel="noopener">eu_banks</a></span>
+              
+            </td>
+            <td>0.30</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-msci-greece-ucits-etf-dist/fr0010405431" target="_blank" rel="noopener">gr_msci_greece</a></span>
+              
+            </td>
+            <td>0.45</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-inde-msci-india-ucits-etf-acc/fr0011869320" target="_blank" rel="noopener">in_pea_india</a></span>
+              
+            </td>
+            <td>0.85</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-russell-2000-ucits-etf-eur-c/lu1681038672" target="_blank" rel="noopener">russell2000</a></span>
+              
+            </td>
+            <td>0.35</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-stoxx-europe-600-healthcare-ucits-etf-acc/lu1834986900" target="_blank" rel="noopener">sec_healthcare_acc</a></span>
+              
+            </td>
+            <td>0.30</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-eau-msci-water-ucits-etf-capi/fr0011882364" target="_blank" rel="noopener">thm_water</a></span>
+              
+            </td>
+            <td>0.60</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-sp-us-industrials-screened-ucits-etf-acc/fr0011869270" target="_blank" rel="noopener">us_industrials</a></span>
+              
+            </td>
+            <td>0.50</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-us-tech-screened-ucits-etf-acc/fr0013412269" target="_blank" rel="noopener">us_pea_us_tech</a></span>
+              
+            </td>
+            <td>0.30</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-msci-usa-value-advanced-ucits-etf-acc/fr001400kh45" target="_blank" rel="noopener">us_value</a></span>
+              
+            </td>
+            <td>0.50</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep"><a href="https://www.amundietf.fr/fr/particuliers/produits/equity/amundi-pea-monde-msci-world-ucits-etf/fr001400u5q4" target="_blank" rel="noopener">world</a></span>
+              
+            </td>
+            <td>0.20</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+          <tr>
+            <td>1</td>
+            <td>
+              
+              <span class="pill rep">world_msci_swap_acc</span>
+              
+            </td>
+            <td>inf</td>
+            <td class="members">
+              
+              <em>(singleton)</em>
+            </td>
+          </tr>
+          
+        </tbody>
+      </table>
+      <p style="color: var(--muted); font-size: 12px; margin-top: 12px;">
+        Representative pick: <strong>lowest-TER member</strong> of the group. TER is
+        decided ex-ante and immune to in-sample selection bias, unlike a CAGR-ranked
+        pick which would be momentum-on-momentum. Use the rep to choose one member
+        per group when constructing strategy universes — picking multiple from the
+        same group adds no diversification. Cross-perimeter pairs (e.g. MSCI World
+        vs S&amp;P 500) are kept separate even when their daily correlation exceeds
+        the threshold. Click an ETF to open its Amundi product page.
+      </p>
+      
+    </div>
+
+    <footer>
+      <p>
+        Universe: every entry of the EUR book's asset registry
+        (<code>config/universe/etfs-universe.yaml</code>) carrying a Yahoo ticker — the
+        Amundi UCITS ETFs a PEA can hold, plus the store-of-value sleeves and the cash
+        series it cannot. Leveraged variants sit alongside their un-levered peers;
+        inverse ETFs are excluded.
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    Plotly.newPlot(
+      "heatmap",
+      [{"type": "heatmap", "x": ["world_msci_swap_acc", "world", "sp500", "sp500_hedged", "sp500_screened", "sp500_scr_hed", "us_msci_esg", "us_pea_nasdaq", "us_pea_us_tech", "russell2000", "us_value", "us_industrials", "msci_europe", "eurostoxx50", "emu_ii_acc", "emu_msci_emu_dist", "emu_msci_emu_acc", "emu_esg_select_acc", "emu_esg_broad_acc", "emu_high_div", "emu_small", "fr_cac40_dist", "fr_cac40_acc", "de_dax_dr", "it_ftse_mib_dist", "it_ftse_mib_acc", "it_mib_esg", "es_ibex_acc", "gr_msci_greece", "topix", "topix_hedged", "cn_pea_china", "in_pea_india", "ap_asia_pacific", "em_pea_emerging", "em_asia", "em_latam", "eu_banks", "sec_healthcare_acc", "thm_water", "cash_estr"], "y": ["world_msci_swap_acc", "world", "sp500", "sp500_hedged", "sp500_screened", "sp500_scr_hed", "us_msci_esg", "us_pea_nasdaq", "us_pea_us_tech", "russell2000", "us_value", "us_industrials", "msci_europe", "eurostoxx50", "emu_ii_acc", "emu_msci_emu_dist", "emu_msci_emu_acc", "emu_esg_select_acc", "emu_esg_broad_acc", "emu_high_div", "emu_small", "fr_cac40_dist", "fr_cac40_acc", "de_dax_dr", "it_ftse_mib_dist", "it_ftse_mib_acc", "it_mib_esg", "es_ibex_acc", "gr_msci_greece", "topix", "topix_hedged", "cn_pea_china", "in_pea_india", "ap_asia_pacific", "em_pea_emerging", "em_asia", "em_latam", "eu_banks", "sec_healthcare_acc", "thm_water", "cash_estr"], "z": [[1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.9933018520553436, 0.9999999999999999, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.975146998500737, 0.9692377012854919, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.8916019855916714, 0.8841194715770035, 0.853808990222564, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.9603105474440117, 0.9564470426051419, 0.9808911916084451, 0.8453052567058537, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.8739256965088514, 0.8687216639446756, 0.8356085253305439, 0.9795707895104251, 0.8585166865199387, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.9465531477215442, 0.9433446565250084, 0.953385821599573, 0.8331897860243495, 0.9400331293873215, 0.8185203629490233, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.9259170506389056, 0.9186817465827801, 0.951732913024787, 0.8540798943460244, 0.9228473690314134, 0.8247166091639663, 0.9106359826663423, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.870888093616937, 0.8661831021863294, 0.9026384913704861, 0.8112306818439277, 0.9037027595184554, 0.8091432664463873, 0.8598624718436668, 0.9523810655474331, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.8434784482151161, 0.8391776599667141, 0.8250913628756691, 0.7642962059074208, 0.8061987387386349, 0.7399620002091426, 0.8436380342336047, 0.7446439899969132, 0.6616910560534609, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.7575593147212994, 0.7469990475123395, 0.7598267283579897, 0.6816165094329694, 0.7669601735572098, 0.6838962340886686, 0.7482651251303375, 0.6918812145696001, 0.6634266685654278, 0.7193161785770409, 0.9999999999999998, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.7803749644414131, 0.7733497023270491, 0.7490872330588837, 0.6571177122784565, 0.7573096256828713, 0.6604950032230138, 0.7399743436249083, 0.6299581267340603, 0.5581138675326622, 0.7676457496456192, 0.6355199495932391, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.776175886212271, 0.777669032919534, 0.6397236608899597, 0.7506563397381616, 0.6498768845539945, 0.7531153376481067, 0.65390970536804, 0.582355937021995, 0.5397479764824754, 0.6283601117147837, 0.549747080880761, 0.6275067190136138, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.7891084373233204, 0.7892180701843927, 0.6688411013978782, 0.7788656782381658, 0.6756712512264871, 0.7789392419682473, 0.6789433409664214, 0.64699553398642, 0.6147556629193457, 0.6421085646638371, 0.565263307281257, 0.6053223573252594, 0.954958983587067, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.7877349707891875, 0.7877466785811275, 0.6677695500409725, 0.7795205391433405, 0.6742792853101299, 0.7791922404330595, 0.6750138576778592, 0.6450850062651923, 0.6121962760113585, 0.6407914355085483, 0.5638640133191252, 0.6032289684564609, 0.9549237911108736, 0.9984472736729607, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.7791812969838745, 0.7776882779471888, 0.6527310038283712, 0.7797303762681349, 0.6600869295633623, 0.7802079330230226, 0.662381256575293, 0.6236694779190328, 0.587871602668916, 0.6333776095627068, 0.5685348082481495, 0.6102209754123871, 0.9633332966911098, 0.9844745674644353, 0.9852570734254299, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.7538525587110716, 0.7531023187349205, 0.6400213916004776, 0.7533972407666333, 0.6453933497542645, 0.7530404904117453, 0.641693177343876, 0.613230687654726, 0.576530407714938, 0.618844690622533, 0.5398945419541165, 0.5915384513223555, 0.9200683873051532, 0.9472324754548808, 0.9463461142747058, 0.9446372551684243, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.7541309376640591, 0.7553576789835533, 0.6315554007817069, 0.7555939190046185, 0.6414277050188073, 0.756579009191246, 0.6499158799819894, 0.6065055102557506, 0.5672523863555338, 0.6164011967406501, 0.5386130672124693, 0.6156753586371643, 0.937900528492769, 0.9573711088309607, 0.9561762711712805, 0.961945300265323, 0.9094049805265911, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.7353551223088785, 0.735650540347566, 0.6175561689022991, 0.7375156839164362, 0.622874860218605, 0.7373050058401963, 0.6242221467434197, 0.5981810752684671, 0.5644907269480509, 0.6007352661704212, 0.5156291508727652, 0.5657244082677984, 0.9177425560248748, 0.9395856037054406, 0.9389424128627958, 0.9329051985553929, 0.9706204379718306, 0.9123926406271037, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.5283987923256399, 0.525546934918136, 0.4025611777337254, 0.4930931296410285, 0.4281966115644307, 0.5109426353526172, 0.39448666635981766, 0.3010252657142852, 0.2826590786265053, 0.4070163141207823, 0.44465095539235544, 0.47084022041744245, 0.8124849177639113, 0.767862833852216, 0.771046672885448, 0.8026618984564386, 0.7491288546913928, 0.7679751620063539, 0.7542243977144409, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.7285295027364189, 0.7219535212281809, 0.6185259048302588, 0.751517028980203, 0.6138774616471729, 0.7387061281160213, 0.6435188310334976, 0.6050972809425014, 0.5525766513227666, 0.6166870748240777, 0.5369699464149642, 0.570306864711939, 0.8520861860529885, 0.848144219962922, 0.8454672499307272, 0.871850232172102, 0.8166703593654675, 0.8572183002870964, 0.8303561834860392, 0.6976417258158218, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.658125196530451, 0.6614340683314412, 0.5396909057551197, 0.6501646409701227, 0.5517778262266189, 0.6529756702633279, 0.5466504064561442, 0.4899474901380252, 0.45767686485186526, 0.5356401560660845, 0.48684285521498655, 0.5385990168370204, 0.872992439802176, 0.8946939909805931, 0.8925284885885068, 0.887108933581497, 0.8511766606258543, 0.8994766127206231, 0.8634762074414992, 0.7878473240706523, 0.8029928647490511, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.6790718736933701, 0.6838061506817361, 0.5589919437617225, 0.6695213891362887, 0.5715841409153171, 0.6726428720082737, 0.5619463301176327, 0.5034657135205428, 0.4689609020347768, 0.5582491515214909, 0.506947316522811, 0.5613995155936184, 0.8964447672890279, 0.9167521595879415, 0.9157483900882304, 0.9111801659329789, 0.8729966006257582, 0.9217294884456586, 0.8683677365856729, 0.8050243567848816, 0.7966243808900995, 0.9819195614658622, 0.9999999999999998, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.757001926346647, 0.7536240538850668, 0.637168507568674, 0.748062769157451, 0.636412651008138, 0.7414091366035569, 0.6617972716855951, 0.6268680658303136, 0.5777267119766839, 0.6075701696770096, 0.5497601724275777, 0.5546082569372205, 0.9055789517150362, 0.9279886420929175, 0.9266556999726775, 0.9353171554519447, 0.8916609965129448, 0.8840534227265027, 0.8821654556046578, 0.7113693953405068, 0.847060599258276, 0.7999888566744223, 0.8185577800951028, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.6907298667656487, 0.6850682847936962, 0.5774457599575102, 0.6935951610717468, 0.5847959632868044, 0.6902949450578942, 0.562799174072665, 0.5306408272585451, 0.4977359869616594, 0.5336625607121984, 0.5373386181664717, 0.5112737683999741, 0.873934461824912, 0.879665596663869, 0.8804177343843534, 0.8967687030205425, 0.8605558901984274, 0.847134922987029, 0.8611634854892791, 0.803094044549384, 0.8041396483430648, 0.825520498280267, 0.8335400035597025, 0.82482940994022, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.6940823726785303, 0.6885912242162566, 0.5797340315148061, 0.6984867891246525, 0.5896956616047277, 0.6974415126191159, 0.5649705144292213, 0.5276965601068778, 0.4995240227360768, 0.5348244818838875, 0.5357415216718403, 0.5284602882535226, 0.8785052273626952, 0.8812819334898534, 0.8821558363081525, 0.9036827257302238, 0.8620078525403269, 0.8509535137362796, 0.8524027859588089, 0.8093341357361833, 0.7898545829407339, 0.8018524799981732, 0.8283991797559815, 0.8283318675287669, 0.9890281301839234, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.6861091938502769, 0.6798323476859531, 0.5674950378657305, 0.7029849941224185, 0.5753178954785043, 0.7017261386480526, 0.5631037254441791, 0.5310589961163211, 0.49647776748793, 0.534655007843308, 0.5408494803925609, 0.5184550462170167, 0.877361946668303, 0.8816969720655655, 0.8817093339023638, 0.9076121591794146, 0.8650735673005752, 0.865884683881697, 0.8640681297273781, 0.7883389302975549, 0.8234525946126137, 0.8304444934821674, 0.8360144184863212, 0.8434241676250879, 0.9780924701728785, 0.9702559593317556, 0.9999999999999998, null, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.6059170081393481, 0.6027231804820893, 0.4784727753131587, 0.6459511696007589, 0.48438238150939616, 0.6448498247679172, 0.47465763343225104, 0.44126678954921283, 0.4208826438982913, 0.4567100631137145, 0.4555997532112073, 0.4519372726481905, 0.8436001372261323, 0.8473602924362978, 0.8502784774861274, 0.874282457574257, 0.826850783443499, 0.8357922970580983, 0.8266492114112765, 0.7635321604347581, 0.7497474799325992, 0.7520384221098317, 0.7711632744173982, 0.7948803193663975, 0.8554896332912746, 0.8627069624282441, 0.8545689715537067, 1.0, null, null, null, null, null, null, null, null, null, null, null, null, null], [0.5145515045011574, 0.5142792049764496, 0.42964723145945255, 0.5423044006949772, 0.453666156724415, 0.5639426074345419, 0.4258814752894579, 0.4033497378699692, 0.402929951450106, 0.4006257356448228, 0.38966582692801527, 0.42391583590695986, 0.6482161734836437, 0.6480446231550269, 0.6496823504938725, 0.6732328058736777, 0.647152491065976, 0.64528100763486, 0.6468737904254599, 0.543929725586703, 0.619111838327999, 0.5865583125721411, 0.599124413900027, 0.6393398699236479, 0.6274593069685618, 0.6377825395385511, 0.650245150823655, 0.6536241284457982, 0.9999999999999999, null, null, null, null, null, null, null, null, null, null, null, null], [0.6392039791045413, 0.6380145993359371, 0.5015879676769007, 0.5815271788206644, 0.5117238353998628, 0.586250614212438, 0.5327475411097009, 0.45668322949260315, 0.4319937191737354, 0.5318429340126335, 0.4283022815769273, 0.5588211671870839, 0.7172219819831237, 0.6967657436822648, 0.6943271594152922, 0.7076287089332883, 0.6633085837555847, 0.6946499221396487, 0.66436813972711, 0.5616338641558847, 0.6288283409799192, 0.6168089945067889, 0.6344515112125629, 0.6605234167241278, 0.617115415536273, 0.6327531647675199, 0.6342311530542519, 0.6426086253874058, 0.4743708308884584, 1.0, null, null, null, null, null, null, null, null, null, null, null], [0.6666427769597272, 0.6621595512177235, 0.5515247377424567, 0.6310842043347765, 0.5625891964859929, 0.6340595758574831, 0.5658426622338141, 0.5113979792322586, 0.48839441165340736, 0.5593013233436103, 0.47913405639335166, 0.5809618661954492, 0.6958727364497019, 0.6927470731980409, 0.6903017946097944, 0.7085016951207197, 0.6641647581059105, 0.6781186295275065, 0.64074938341204, 0.5419813993142807, 0.6329920445852584, 0.6033989538928933, 0.6272242098408716, 0.6649446886707822, 0.6200016302020132, 0.6376891098770918, 0.6394358459598452, 0.6198411617022517, 0.4787925635139493, 0.9167411192853167, 1.0, null, null, null, null, null, null, null, null, null, null], [0.5520805211711337, 0.5503047724908896, 0.5167972655943216, 0.5094205727601442, 0.5204405011776702, 0.5036568891499922, 0.5265823829834934, 0.5241017368019384, 0.5006835892482729, 0.486967866026136, 0.40875551954754896, 0.3816642372114948, 0.4724813914197914, 0.4879079629508972, 0.48597688020805474, 0.47177672927809233, 0.46328963011867264, 0.44847255719800677, 0.46672238596892607, 0.3178303018392602, 0.4538823628236892, 0.38280746489039397, 0.3843617896489736, 0.43372592997649995, 0.41779797179308037, 0.39918739291341176, 0.40386328879364286, 0.34791650396722795, 0.3126698041179519, 0.3683635742503569, 0.3845461217356677, 1.0, null, null, null, null, null, null, null, null, null], [0.4286718499676501, 0.4212151492314017, 0.3812608655567754, 0.38529861476560096, 0.39409014654812885, 0.3946341865553084, 0.3822263720082397, 0.36117994856191565, 0.36324070286034227, 0.3246555885723378, 0.31176983526158036, 0.34519766785986455, 0.44435254601033214, 0.44738526265127404, 0.44925975675905994, 0.4432032542055094, 0.4240768006594632, 0.45695819074916005, 0.46461750285359465, 0.31161577954419034, 0.42413653606637525, 0.43603563801040524, 0.4334336531312462, 0.4017072354358972, 0.4034773145806073, 0.39187505808791895, 0.4126942651912345, 0.40777987703737817, 0.43270565713151277, 0.39982765713578505, 0.41075210375755256, 0.39089569643362015, 1.0, null, null, null, null, null, null, null, null], [0.6294092985126649, 0.6294056872229702, 0.5637917111431817, 0.6302076359597978, 0.5691946548116988, 0.6234541698821778, 0.5670823070077565, 0.5867154170538235, 0.5666140435816729, 0.5057750019750965, 0.4339561161975895, 0.4522974645244153, 0.6190003723857374, 0.6300200898539723, 0.6284703759835073, 0.6121973338492265, 0.5877512210656997, 0.6059385965265887, 0.6015369846086234, 0.3828203378420188, 0.5842268008416655, 0.5237424977571579, 0.5414852393188153, 0.5555388562748311, 0.5321914921299933, 0.530568679181468, 0.5239618143213942, 0.5170162004782609, 0.5178380919266282, 0.5327705241180184, 0.5217057881040267, 0.6731087403456902, 0.5847189192862045, 1.0, null, null, null, null, null, null, null], [0.6875436401801291, 0.6842598454860974, 0.610786060050961, 0.6854753710101327, 0.6126183313831145, 0.6782558140193989, 0.6277004617388746, 0.6414766568106995, 0.611864132503535, 0.5849417311073837, 0.4520633438748207, 0.5195887856419635, 0.6662664849335952, 0.6935367684020786, 0.6909603268823831, 0.6806116940093812, 0.6463291501574013, 0.6741880033753161, 0.6531777651636123, 0.40304838845771995, 0.6585922429853773, 0.5463976309478938, 0.5722610716365046, 0.6311499180126203, 0.5795331785868634, 0.5832737590396845, 0.585425192464663, 0.5595242064132628, 0.5722443306522862, 0.5829450438106694, 0.5799686127262872, 0.6988439534682782, 0.5725614547153658, 0.8696394018960368, 1.0, null, null, null, null, null, null], [0.6812967875625826, 0.6768396579133343, 0.6096457837111123, 0.6651673886076057, 0.6140265395226415, 0.6563791754522844, 0.6263492527629361, 0.6518585239077224, 0.6285972065276957, 0.5671837807150649, 0.46919426323131636, 0.49906225526478437, 0.6403991945740107, 0.6703990490829616, 0.6707753667372889, 0.6607296565091987, 0.6246711665467641, 0.653717331171568, 0.6214695345903896, 0.3893766787903586, 0.628093038611692, 0.5381453193712515, 0.5578964243488703, 0.6094834628068244, 0.5500084723281832, 0.5487188280332235, 0.5523048473217697, 0.5389089085119925, 0.5205612912305722, 0.5783229762326929, 0.5752643470833269, 0.7194687060838375, 0.5601026311609641, 0.8828095311606631, 0.931918942694941, 1.0, null, null, null, null, null], [0.4908460261665445, 0.4867728580766928, 0.4194853562298815, 0.5141909115103297, 0.42057541664450615, 0.5082834146822611, 0.41205944343537715, 0.42922973650645574, 0.3969085932589985, 0.4322375294044837, 0.35327210947704873, 0.4202779596844516, 0.536659310654266, 0.5569412672439389, 0.553500804100903, 0.555663928073023, 0.5417008723029716, 0.5340797384261908, 0.5480526244856299, 0.3917064995601972, 0.5386174498897549, 0.4595804774847825, 0.47216954660339683, 0.4826266781066869, 0.526472319836316, 0.5324294991852709, 0.5347452571741362, 0.5304219899748509, 0.4957106184616673, 0.4634909966510752, 0.48451840530852225, 0.3859224246351063, 0.2994919337823765, 0.5325443871210925, 0.5928807463557492, 0.5354921275757448, 0.9999999999999999, null, null, null, null], [0.6388801632552485, 0.6324722011016437, 0.5327319021891895, 0.6634780790167606, 0.5434252326856553, 0.6667628275315342, 0.5044576150305803, 0.49952090630888113, 0.48191569941238316, 0.4883364641266717, 0.48821029870482213, 0.4763362156324678, 0.8127310841247948, 0.8287070123441983, 0.8307873437514915, 0.843510204192917, 0.8237313171314049, 0.7925639201386947, 0.8295271521929682, 0.7149443087397026, 0.712145602988219, 0.734977637767028, 0.740712663634861, 0.7642207837537971, 0.8812271780556157, 0.8730655060130932, 0.8625021240067271, 0.8889028617666418, 0.6879399015244938, 0.5908207826111855, 0.5902927520807181, 0.37515451098816965, 0.42872650617210956, 0.5194581633398352, 0.5716367794730975, 0.5390848762643629, 0.5259301812817875, 1.0, null, null, null], [0.3770235892394903, 0.3875585818925804, 0.2676017235520348, 0.3420440681370123, 0.29280156593334783, 0.35508018832238586, 0.30667433892166873, 0.17699323463027883, 0.16222500728909245, 0.32151596634806073, 0.2888655784245945, 0.3162473517341529, 0.6491299961755247, 0.5153712320360235, 0.5139784172873223, 0.5237597964519379, 0.4912453551706401, 0.5067631794512213, 0.5053650095713302, 0.5051584681930468, 0.4658139738717694, 0.5323669159616984, 0.531313366146632, 0.47382491114138586, 0.4439274323157555, 0.4384002904179726, 0.43942808823831453, 0.43880213875038104, 0.33725831904956655, 0.4331914586685254, 0.3575193131154582, 0.24519881317339734, 0.29724067516902203, 0.3219468572847843, 0.2982206697045437, 0.3071684190089637, 0.22198687157708547, 0.37366884409636214, 1.0, null, null], [0.4985164552609268, 0.5009327977622822, 0.44840627405781514, 0.4100028376324591, 0.46003146182137583, 0.4083217004441226, 0.46137000031300684, 0.33628431203746717, 0.28140444298079786, 0.541088284523189, 0.3427133480329661, 0.583760093675795, 0.5020106661850485, 0.43739287670413757, 0.43639127351187046, 0.4483950776795072, 0.41458913455831636, 0.4666980778527534, 0.42781974999030886, 0.3893082266460938, 0.4530601813102723, 0.42140993126523274, 0.43956228035862827, 0.4136480656589968, 0.3666787860924112, 0.3685977222314034, 0.3585255951875305, 0.3455989411620268, 0.3574415008680809, 0.44446035060525874, 0.42019498927896587, 0.3227346757321361, 0.24973945570133135, 0.38363377884158634, 0.4035721757671755, 0.39675889432178363, 0.3286997895174211, 0.30091107972495357, 0.3440360478866607, 1.0, null], [0.0497755527410558, 0.05081082675231049, 0.07646091777113738, 0.06931590726458199, 0.05793990944568403, 0.05195844186922422, 0.04606303041488811, 0.051490902888658804, 0.05181876921412445, 0.025720259737271198, 0.05177022608693129, 0.026669200500456517, 0.0019322389582590387, -0.02614861583409692, -0.02692452929917419, -0.029641312352816914, 0.016716733322018004, -0.05022769333675075, 0.026082274320296812, -0.0069688694629087495, -0.01150688527466263, -0.017152508473029106, -0.023243472458918453, -0.02297020446612767, 0.013802403616224519, -0.0035212229372701903, -0.00863347977627878, -0.016034089323972392, -0.08432048954627604, -0.09529075931700577, -0.04725809962988494, -0.021468072927909917, -0.05562535032886597, -0.008880236961055603, -0.08772283806864319, -0.06321146125582622, -0.003798743187726369, -0.02194862172016768, 0.012509664864356836, 0.04735240447327629, 1.0]], "zmin": -1, "zmax": 1, "colorscale": [[0.0, "#58a6ff"], [0.5, "#161b22"], [0.85, "#d29922"], [1.0, "#f85149"]], "hoverongaps": false, "hovertemplate": "%{y} vs %{x}<br>corr = %{z:.2f}<extra><\/extra>"}],
+      {"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#e6edf3", "family": "system-ui"}, "margin": {"t": 16, "r": 16, "b": 120, "l": 140}, "xaxis": {"gridcolor": "#30363d", "zerolinecolor": "#30363d", "tickangle": -45, "tickfont": {"size": 9}}, "yaxis": {"gridcolor": "#30363d", "zerolinecolor": "#30363d", "autorange": "reversed", "tickfont": {"size": 9}}, "legend": {"orientation": "h", "y": -0.15, "x": 0.5, "xanchor": "center"}, "hovermode": "x unified"},
+      { responsive: true, displaylogo: false }
+    );
+  </script>
+</body>
+</html>

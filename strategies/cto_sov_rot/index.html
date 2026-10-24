@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>cto_sov_rot — trades</title>
+  
+  <style>
+    :root {
+      --bg: #0e1116;
+      --panel: #161b22;
+      --border: #30363d;
+      --grid: #21262d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --positive: #3fb950;
+      --negative: #f85149;
+    }
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+    h1 { margin: 0 0 4px 0; font-size: 26px; text-align: center; }
+    h2 { margin: 28px 0 12px 0; font-size: 19px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .subtitle { color: var(--muted); margin-bottom: 20px; font-size: 13px; text-align: center; }
+    .subtitle.gate-refused { color: #d29922; margin-top: -12px; }
+    nav { margin-bottom: 18px; }
+    nav a {
+      display: inline-block; padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--panel); color: var(--accent); text-decoration: none; font-size: 14px;
+    }
+    nav a:hover { border-color: var(--accent); background: var(--bg); }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+    .note { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 10px 0 0 0; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { color: var(--muted); font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .pos { color: var(--positive); }
+    .neg { color: var(--negative); }
+    .key { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 10px; font-size: 13px; }
+    .toolbar label { color: var(--muted); }
+    select, button {
+      background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px;
+      padding: 4px 10px; font-size: 13px; font-family: inherit;
+    }
+    button { color: var(--accent); cursor: pointer; }
+    button:hover, select:hover { border-color: var(--accent); }
+    button.on { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    button[hidden] { display: none; }
+    #view-label { color: var(--muted); }
+    #view-label strong { color: var(--text); font-weight: 600; }
+    .chart { height: 520px; }
+    .chart-small { height: 360px; }
+    #status { color: var(--muted); font-size: 13px; padding: 40px 0; text-align: center; }
+    #status.error { color: var(--negative); }
+    .trades-scroll { max-height: 420px; overflow-y: auto; }
+    table.trades tbody tr { cursor: pointer; }
+    table.trades tbody tr:hover, table.trades tbody tr:focus { background: rgba(88, 166, 255, 0.07); outline: none; }
+    table.trades tbody tr.selected { background: rgba(88, 166, 255, 0.16); }
+    .empty { color: var(--muted); padding: 12px 0; }
+    @media (max-width: 700px) { .chart { height: 420px; } h1 { font-size: 21px; } }
+  </style>
+</head>
+<body><div class="container">
+    <nav><a href="../../index.html">← Strategies</a></nav>
+    <h1>cto_sov_rot</h1>
+    <div class="subtitle">47 trades · one book, rotation · 2016-01-11 → 2026-10-22</div>
+    <div class="subtitle gate-refused" id="gate-verdict">Runs its rank-1 row graded FAIL (LUCKY EDGE · NOISY RANKING · DECAY · CONCENTRATED · BEHIND SLATE): FAIL: WFE 0.34 &lt; 0.40; FAIL: one walk-forward year made 60% of the profit (max 50%); WARN: own-slate DSR 0.15 &lt; 0.90 — this row&#39;s, not the 50-row book&#39;s; WARN: PBO 0.53 &gt;= 0.50 — the grid&#39;s ranking is noise; the 50-row ensemble promoted does not rest on it; WARN: trailed its equal-weight slate in 35% of its 2-year stretches (worst 2022-01-31 → 2024-01-31, by 4.4 pts/yr; ≈2.4 independent)</div>
+    <div class="subtitle" id="forward-record">Forward record since 2026-10-02 (0.05 y, 14 bars, 2 pick(s)): -58.7%/yr against -46.8%/yr for its slate, -11.8 pts/yr; its claimed in-sample edge of +14.8 pts/yr would take ≈0.7 y of it to tell from noise.</div>
+
+    <h2>Equity and trades</h2>
+    <div class="panel">
+      <div class="toolbar">
+        <label for="period">Period</label>
+        <select id="period" aria-label="Period"></select>
+        <button type="button" id="back" hidden>← Equity curve</button>
+        <span id="view-label"></span>
+      </div>
+      <div id="status">Loading…</div>
+      <div id="chart" class="chart" hidden></div>
+      <p class="note" id="chart-note">
+        Pick a period to list its trades; select a trade to draw its asset's price in grey with
+        the days each book held it —
+        <span class="key" style="background: #3987e5"></span>held by the
+        strategy's one book, rotation.
+        Below the price, the trade's weight on each bar, in its book's colour: the entry, the ladder's rungs, the cash leg's and the volatility
+        target's moves.
+      </p>
+    </div>
+    <div class="panel">
+      <div class="toolbar"><strong id="trade-count"></strong></div>
+      <div class="table-wrap trades-scroll">
+        <table class="trades">
+          <thead>
+            <tr>
+              <th>Asset</th><th>Type</th><th>Entry</th><th>Exit</th><th class="num">Days</th>
+              <th class="num">Entry weight</th><th class="num">Peak weight</th><th class="num">Size changes</th>
+              <th class="num">Return</th><th class="num">vs EW</th><th>Handover</th>
+              <th class="num">Both books (d)</th>
+              <th class="num">NAV Σw·r</th>
+            </tr>
+          </thead>
+          <tbody id="trade-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <h2>Trades by type</h2>
+    <div class="panel">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Trades opened</th><th>Type</th><th class="num">Trades</th><th class="num">Share</th>
+              <th class="num">Mean return</th><th class="num">Median return</th>
+              <th class="num">Mean excess</th><th class="num">Beat EW</th>
+              <th class="num">Median days</th><th class="num">Median overlap days</th>
+              <th class="num">NAV per trade</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>all</td><td><span class="key" style="background: #3987e5"></span>rotation</td>
+              <td class="num">47</td><td class="num">100%</td>
+              <td class="num"><span class="pos">44.4%</span></td><td class="num"><span class="pos">1.8%</span></td>
+              <td class="num"><span class="pos">24.0%</span></td><td class="num">32%</td>
+              <td class="num">42.0</td>
+              <td class="num">—</td>
+              <td class="num"><span class="pos">7.41%</span></td>
+            </tr>
+            <tr>
+              <td>opened in-sample</td><td><span class="key" style="background: #3987e5"></span>rotation</td>
+              <td class="num">29</td><td class="num">100%</td>
+              <td class="num"><span class="pos">23.8%</span></td><td class="num"><span class="pos">2.0%</span></td>
+              <td class="num"><span class="pos">10.5%</span></td><td class="num">45%</td>
+              <td class="num">49.0</td>
+              <td class="num">—</td>
+              <td class="num"><span class="pos">6.63%</span></td>
+            </tr>
+            <tr>
+              <td>opened in the holdout</td><td><span class="key" style="background: #3987e5"></span>rotation</td>
+              <td class="num">18</td><td class="num">100%</td>
+              <td class="num"><span class="pos">77.6%</span></td><td class="num"><span class="pos">1.4%</span></td>
+              <td class="num"><span class="pos">45.6%</span></td><td class="num">11%</td>
+              <td class="num">38.5</td>
+              <td class="num">—</td>
+              <td class="num"><span class="pos">8.66%</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 style="font-size: 14px; margin: 18px 0 6px 0;">Trade sizes by type</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Trades opened</th><th>Type</th><th class="num">Trades</th>
+              <th class="num">Median entry weight</th><th class="num">Median peak weight</th>
+              <th class="num">Mean size changes</th><th class="num">Re-sized</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>all</td><td><span class="key" style="background: #3987e5"></span>rotation</td><td class="num">47</td>
+              <td class="num">10.4%</td><td class="num">39.3%</td>
+              <td class="num">21.4</td><td class="num">68%</td>
+            </tr>
+            <tr>
+              <td>opened in-sample</td><td><span class="key" style="background: #3987e5"></span>rotation</td><td class="num">29</td>
+              <td class="num">9.3%</td><td class="num">35.8%</td>
+              <td class="num">20.1</td><td class="num">66%</td>
+            </tr>
+            <tr>
+              <td>opened in the holdout</td><td><span class="key" style="background: #3987e5"></span>rotation</td><td class="num">18</td>
+              <td class="num">12.4%</td><td class="num">48.4%</td>
+              <td class="num">23.6</td><td class="num">72%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">A size change is a fill inside the trade that moved its weight — a ladder
+        rung, a cash-leg or volatility-target move, a host re-size; a relabel that only moves it
+        from one book to the other is not one.</p>
+    </div>
+
+    <h2>Holding time against return</h2>
+    <div class="panel">
+      <div class="toolbar">
+        <span>Read against</span>
+        <button type="button" class="y-axis on" data-y="ret">Return</button>
+        <button type="button" class="y-axis" data-y="excess">Excess over the slate</button>
+      </div>
+      <div id="scatter" class="chart-small"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th><th>Holding</th><th class="num">Trades</th><th class="num">Mean return</th>
+              <th class="num">Median return</th><th class="num">Mean excess</th><th class="num">Beat EW</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="key" style="background: #3987e5"></span>rotation</td><td>≤ 7 d</td><td class="num">9</td>
+              <td class="num"><span class="pos">0.0%</span></td><td class="num"><span class="neg">-0.3%</span></td>
+              <td class="num"><span class="neg">-0.5%</span></td><td class="num">33%</td>
+            </tr>
+            <tr>
+              <td><span class="key" style="background: #3987e5"></span>rotation</td><td>7 d – 30 d</td><td class="num">11</td>
+              <td class="num"><span class="pos">0.2%</span></td><td class="num"><span class="neg">-1.6%</span></td>
+              <td class="num"><span class="neg">-2.1%</span></td><td class="num">36%</td>
+            </tr>
+            <tr>
+              <td><span class="key" style="background: #3987e5"></span>rotation</td><td>30 d – 91 d</td><td class="num">8</td>
+              <td class="num"><span class="neg">-0.4%</span></td><td class="num"><span class="neg">-0.5%</span></td>
+              <td class="num"><span class="neg">-3.7%</span></td><td class="num">12%</td>
+            </tr>
+            <tr>
+              <td><span class="key" style="background: #3987e5"></span>rotation</td><td>91 d – 182 d</td><td class="num">5</td>
+              <td class="num"><span class="pos">5.1%</span></td><td class="num"><span class="pos">6.4%</span></td>
+              <td class="num"><span class="neg">-3.0%</span></td><td class="num">20%</td>
+            </tr>
+            <tr>
+              <td><span class="key" style="background: #3987e5"></span>rotation</td><td>182 d – 365 d</td><td class="num">4</td>
+              <td class="num"><span class="pos">5.9%</span></td><td class="num"><span class="pos">2.7%</span></td>
+              <td class="num"><span class="neg">-19.7%</span></td><td class="num">25%</td>
+            </tr>
+            <tr>
+              <td><span class="key" style="background: #3987e5"></span>rotation</td><td>> 365 d</td><td class="num">10</td>
+              <td class="num"><span class="pos">203.8%</span></td><td class="num"><span class="pos">31.4%</span></td>
+              <td class="num"><span class="pos">127.7%</span></td><td class="num">50%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script type="application/json" id="colours">{"buy-and-hold": "#3987e5", "dip": "#d95926", "dip+rotation": "#199e70", "price": "#6e7681", "rotation": "#3987e5", "rotation+zig-zag": "#199e70", "unsplit": "#8b949e", "zig-zag": "#d95926"}</script>
+  <script type="application/json" id="books">{"both": "dip+rotation", "companion": "dip"}</script>
+  <script type="application/json" id="type-colours">{"dip": "#d95926", "mixed": "#199e70", "rotation": "#3987e5", "zig-zag": "#d95926"}</script>
+  <script>
+    (() => {
+      const SCHEMA = 3;
+      const PLOTLY_SRC = "https://cdn.plot.ly/plotly-2.35.2.min.js";
+      const COLOURS = JSON.parse(document.getElementById("colours").textContent);
+      const TYPE_COLOURS = JSON.parse(document.getElementById("type-colours").textContent);
+      const BOOKS = JSON.parse(document.getElementById("books").textContent);
+      const SYMBOLS = ["circle", "diamond", "square", "triangle-up", "x"];
+      const LIST_ALL_UP_TO = 1000;
+      const LAYOUT = {
+        paper_bgcolor: "#161b22", plot_bgcolor: "#161b22",
+        font: { color: "#e6edf3", family: "system-ui, -apple-system, 'Segoe UI', sans-serif", size: 12 },
+        margin: { t: 16, r: 16, b: 44, l: 60 },
+        xaxis: { gridcolor: "#21262d", linecolor: "#30363d", zeroline: false },
+        yaxis: { gridcolor: "#21262d", linecolor: "#30363d", zeroline: false },
+        legend: { orientation: "h", y: -0.16, x: 0.5, xanchor: "center" },
+        hoverlabel: { bgcolor: "#0e1116", bordercolor: "#30363d", font: { color: "#e6edf3" } },
+      };
+      const chart = document.getElementById("chart");
+      const statusEl = document.getElementById("status");
+      const periodEl = document.getElementById("period");
+      const backEl = document.getElementById("back");
+      const viewLabel = document.getElementById("view-label");
+      const rowsEl = document.getElementById("trade-rows");
+      const countEl = document.getElementById("trade-count");
+      const priceCache = new Map();
+      let data = null, times = null, labels = null, trades = [], periods = [];
+      let range = null, selected = null, yField = "ret", listed = [];
+
+      function loadPlotly() {
+        if (window.Plotly) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = PLOTLY_SRC;
+          s.charset = "utf-8";
+          s.onload = resolve;
+          s.onerror = () => reject(new Error("Plotly did not load"));
+          document.head.appendChild(s);
+        });
+      }
+      function decodeTime(axis) {
+        const out = new Array(axis.dt.length + 1);
+        let s = axis.t0;
+        out[0] = s * 1000;
+        for (let i = 0; i < axis.dt.length; i++) { s += axis.dt[i] * axis.step; out[i + 1] = s * 1000; }
+        return out;
+      }
+      function iso(ms) { return new Date(ms).toISOString().slice(0, 19).replace("T", " "); }
+      function day(ms) {
+        const s = iso(ms);
+        return s.endsWith("00:00:00") ? s.slice(0, 10) : s.slice(0, 16);
+      }
+      function pct(v, d = 1) { return v == null || !isFinite(v) ? "—" : (v * 100).toFixed(d) + "%"; }
+      function cell(tr, text, cls) {
+        const td = document.createElement("td");
+        td.textContent = text;
+        if (cls) td.className = cls;
+        tr.appendChild(td);
+        return td;
+      }
+      function signedCell(tr, v, d = 1) {
+        cell(tr, pct(v, d), "num " + (v == null ? "" : v >= 0 ? "pos" : "neg"));
+      }
+      function typeColour(t) { return TYPE_COLOURS[t] || COLOURS.unsplit; }
+      function holderLabel(h) {
+        if (h === BOOKS.both) return "held by both books";
+        if (h === "rotation" || h === BOOKS.companion) return "held by the " + h + " book";
+        return "held (" + h + ")";
+      }
+      function sizeBars(t) {
+        // The weight held into each of the trade's bars, per book (`data.parts`), off its step
+        // path — each point holds until the next one or the exit — drawn over the bar's own
+        // period, from the previous bar's close to its own, so a weekend is no gap.
+        const x = [], width = [], y = data.parts.map(() => []);
+        let p = 0;
+        for (let b = t.entry + 1; b <= t.exit; b++) {
+          while (p + 1 < t.size.length && t.size[p + 1][0] <= b) p++;
+          x.push(labels[b]);
+          width.push(times[b] - times[b - 1]);
+          for (let k = 0; k < data.parts.length; k++) y[k].push(t.size[p][k + 1]);
+        }
+        return { x, y, width, offset: width.map((w) => -w) };
+      }
+
+      function buildTrades() {
+        const c = data.trades;
+        return c.entry.map((_, i) => ({
+          i,
+          asset: data.assets[c.asset[i]],
+          type: data.types[c.type[i]],
+          entry: c.entry[i], exit: c.exit[i],
+          handover: c.handover[i] >= 0 ? c.handover[i] : null,
+          ret: c.ret[i], excess: c.excess[i], nav: c.nav[i], weight: c.weight[i], days: c.days[i],
+          retBefore: c.ret_before[i], retAfter: c.ret_after[i], overlap: c.overlap[i],
+          spans: c.spans[i].map(([h, lo, hi]) => [data.holders[h], lo, hi]),
+          entryWeight: c.entry_weight[i], peakWeight: c.peak_weight[i],
+          sizeChanges: c.size_changes[i], size: c.size[i],
+        }));
+      }
+      function buildPeriods() {
+        const out = [{ key: "all", label: "All", lo: times[0], hi: times[times.length - 1] }];
+        if (data.split != null) out.push({ key: "in-sample", label: data.period_labels.in_sample, lo: times[0], hi: times[data.split] });
+        if (data.holdout != null) out.push({ key: "holdout", label: data.period_labels.holdout, lo: times[data.holdout], hi: times[times.length - 1] });
+        const years = [...new Set(times.map((t) => new Date(t).getUTCFullYear()))].sort((a, b) => b - a);
+        for (const y of years) {
+          out.push({ key: String(y), label: String(y), lo: Date.UTC(y, 0, 1), hi: Date.UTC(y + 1, 0, 1) - 1 });
+        }
+        return out;
+      }
+      function fillPeriodSelect() {
+        periodEl.textContent = "";
+        for (const p of periods) {
+          const o = document.createElement("option");
+          o.value = p.key;
+          o.textContent = p.label;
+          periodEl.appendChild(o);
+        }
+        const custom = document.createElement("option");
+        custom.value = "custom";
+        custom.textContent = "Zoomed range";
+        custom.hidden = true;
+        periodEl.appendChild(custom);
+      }
+
+      function listTrades() {
+        const [lo, hi] = range;
+        listed = trades.filter((t) => times[t.entry] <= hi && times[t.exit] >= lo);
+        rowsEl.textContent = "";
+        for (const t of listed) {
+          const tr = document.createElement("tr");
+          tr.tabIndex = 0;
+          tr.dataset.i = t.i;
+          if (selected === t.i) tr.className = "selected";
+          cell(tr, t.asset);
+          const k = cell(tr, "");
+          const key = document.createElement("span");
+          key.className = "key";
+          key.style.background = typeColour(t.type);
+          k.appendChild(key);
+          k.appendChild(document.createTextNode(t.type));
+          cell(tr, day(times[t.entry]));
+          cell(tr, day(times[t.exit]));
+          cell(tr, t.days.toFixed(1), "num");
+          cell(tr, pct(t.entryWeight), "num");
+          cell(tr, pct(t.peakWeight), "num");
+          cell(tr, String(t.sizeChanges), "num");
+          signedCell(tr, t.ret);
+          signedCell(tr, t.excess);
+          cell(tr, t.handover == null ? "—" : day(times[t.handover]));
+          cell(tr, t.overlap > 0 ? t.overlap.toFixed(1) : "—", "num");
+          signedCell(tr, t.nav, 2);
+          tr.addEventListener("click", () => selectTrade(t.i));
+          tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectTrade(t.i); } });
+          rowsEl.appendChild(tr);
+        }
+        if (!listed.length) {
+          const tr = document.createElement("tr");
+          const td = cell(tr, "No trade in this period.", "empty");
+          td.colSpan = 13;
+          rowsEl.appendChild(tr);
+        }
+        countEl.textContent = listed.length + " of " + trades.length + " trades in " + day(lo) + " → " + day(hi);
+      }
+
+      function drawEquity() {
+        selected = null;
+        backEl.hidden = true;
+        delete chart.dataset.drawn;
+        delete chart.dataset.bars;
+        viewLabel.textContent = "";
+        const trace = {
+          type: "scatter", mode: "lines", name: "equity",
+          x: labels, y: data.equity,
+          line: { color: "#c9d1d9", width: 2 },
+          hovertemplate: "%{x}<br>equity %{y:.3f}<extra></extra>",
+        };
+        const layout = Object.assign({}, LAYOUT, {
+          showlegend: false,
+          hovermode: "x",
+          xaxis: Object.assign({}, LAYOUT.xaxis, { type: "date", range: [iso(range[0]), iso(range[1])] }),
+          yaxis: Object.assign({}, LAYOUT.yaxis, { type: "log", title: { text: "Equity (multiple)" }, autorange: true }),
+        });
+        return Plotly.react(chart, [trace], layout, { responsive: true, displaylogo: false });
+      }
+
+      async function loadPrice(asset) {
+        const href = data.prices[asset];
+        if (!href) throw new Error("no price series for " + asset);
+        if (!priceCache.has(asset)) {
+          priceCache.set(asset, fetch("../../" + href).then((r) => {
+            if (!r.ok) throw new Error(href + ": HTTP " + r.status);
+            return r.json();
+          }).then((p) => {
+            if (p.schema !== SCHEMA) throw new Error(href + ": schema " + p.schema);
+            const t = decodeTime(p.time);
+            return { t, x: t.map(iso), close: p.close };
+          }));
+        }
+        return priceCache.get(asset);
+      }
+
+      async function selectTrade(i) {
+        const t = trades[i];
+        selected = i;
+        if (!listed.includes(t)) {
+          // A trade reached from the scatter or a link, outside the listed period: list its year.
+          const y = String(new Date(times[t.entry]).getUTCFullYear());
+          const p = periods.find((q) => q.key === y) || periods[0];
+          periodEl.value = p.key;
+          range = [p.lo, p.hi];
+          listTrades();
+        }
+        for (const row of rowsEl.querySelectorAll("tr")) row.classList.toggle("selected", Number(row.dataset.i) === i);
+        let series;
+        try {
+          series = await loadPrice(t.asset);
+        } catch (err) {
+          viewLabel.textContent = "The price of " + t.asset + " could not be loaded: " + err.message;
+          return;
+        }
+        if (selected !== i) return;
+        const traces = [{
+          type: "scatter", mode: "lines", name: t.asset + " price",
+          x: series.x, y: series.close,
+          line: { color: COLOURS.price, width: 1.5 },
+          hovertemplate: "%{x}<br>" + t.asset + " %{y:.4g}<extra></extra>",
+        }];
+        const drawn = [];
+        const shown = new Set();
+        for (const [h, lo, hi] of t.spans) {
+          const a = times[lo], b = times[hi];
+          const xs = [], ys = [];
+          for (let k = 0; k < series.t.length; k++) {
+            if (series.t[k] >= a && series.t[k] <= b) { xs.push(series.x[k]); ys.push(series.close[k]); }
+          }
+          drawn.push([h, day(a), day(b), xs.length]);
+          traces.push({
+            type: "scatter", mode: "lines", name: holderLabel(h), legendgroup: h,
+            showlegend: !shown.has(h),
+            x: xs, y: ys,
+            line: { color: COLOURS[h] || COLOURS.unsplit, width: 3 },
+            hovertemplate: "%{x}<br>" + t.asset + " %{y:.4g} · " + holderLabel(h) + "<extra></extra>",
+          });
+          shown.add(h);
+        }
+        // Below the price, the weight on each of the trade's bars as bars, one trace per book,
+        // stacked: the bar's height is the trade's weight and each colour its book's share.
+        const bars = sizeBars(t);
+        const drawnBars = [];
+        data.parts.forEach((name, k) => {
+          const y = bars.y[k];
+          if (!y.some((v) => v > 0)) return;
+          drawnBars.push([name, y.filter((v) => v > 0).length, Math.max(...y)]);
+          traces.push({
+            type: "bar", name: "weight · " + name, legendgroup: "weight-" + name,
+            x: bars.x, y, yaxis: "y2", width: bars.width, offset: bars.offset,
+            marker: { color: COLOURS[name] || COLOURS.unsplit, line: { color: "#161b22", width: 0 } },
+            hovertemplate: "%{x}<br>" + name + " weight %{y:.1%}<extra></extra>",
+          });
+        });
+        const pad = Math.max(
+          data.view_pad.fraction * (times[t.exit] - times[t.entry]),
+          (data.sub_daily ? data.view_pad.min_days_sub_daily : data.view_pad.min_days_daily) * 86400000,
+        );
+        const x0 = Math.max(times[t.entry] - pad, series.t[0]);
+        const x1 = Math.min(times[t.exit] + pad, series.t[series.t.length - 1]);
+        let ymin = Infinity, ymax = -Infinity;
+        for (let k = 0; k < series.t.length; k++) {
+          if (series.t[k] >= x0 && series.t[k] <= x1) {
+            ymin = Math.min(ymin, series.close[k]);
+            ymax = Math.max(ymax, series.close[k]);
+          }
+        }
+        const span = isFinite(ymin) ? Math.max(ymax - ymin, Math.abs(ymax) * 0.01) : 1;
+        // A bar wide enough to spare them gets a 1 px surface outline — a 2 px gap between two
+        // bars and between the two books' segments; a narrower one is drawn flush, an area.
+        const pxPerBar = (chart.clientWidth - LAYOUT.margin.l - LAYOUT.margin.r) *
+          ((times[t.exit] - times[t.entry]) / Math.max(x1 - x0, 1)) / Math.max(bars.x.length, 1);
+        const outlined = pxPerBar >= 6;
+        for (const tr of traces) if (tr.type === "bar") tr.marker.line.width = outlined ? 1 : 0;
+        const shapes = [], annotations = [];
+        if (t.handover != null) {
+          const hx = iso(times[t.handover]);
+          shapes.push({ type: "line", xref: "x", yref: "paper", x0: hx, x1: hx, y0: 0, y1: 1, line: { color: "#e6edf3", width: 1 } });
+          annotations.push({ xref: "x", yref: "paper", x: hx, y: 1, yanchor: "bottom", text: "handover", showarrow: false, font: { color: "#e6edf3", size: 11 } });
+        }
+        const layout = Object.assign({}, LAYOUT, {
+          showlegend: true,
+          hovermode: "x",
+          barmode: "stack",
+          shapes, annotations,
+          margin: Object.assign({}, LAYOUT.margin, { t: 24 }),
+          xaxis: Object.assign({}, LAYOUT.xaxis, { type: "date", range: [iso(x0), iso(x1)], anchor: "y2" }),
+          yaxis: Object.assign({}, LAYOUT.yaxis, {
+            domain: [0.3, 1], type: "linear", title: { text: t.asset + " price" },
+            range: isFinite(ymin) ? [ymin - 0.08 * span, ymax + 0.08 * span] : undefined,
+          }),
+          yaxis2: Object.assign({}, LAYOUT.yaxis, {
+            domain: [0, 0.24], title: { text: "Weight" }, tickformat: ".0%",
+            range: [0, Math.max(t.peakWeight, 1e-6) * 1.15],
+          }),
+        });
+        await Plotly.react(chart, traces, layout, { responsive: true, displaylogo: false });
+        chart.dataset.drawn = JSON.stringify(drawn);
+        chart.dataset.bars = JSON.stringify(drawnBars);
+        backEl.hidden = false;
+        viewLabel.textContent = "";
+        const strong = document.createElement("strong");
+        strong.textContent = t.asset;
+        viewLabel.appendChild(strong);
+        viewLabel.appendChild(document.createTextNode(
+          " · " + t.type + " · " + day(times[t.entry]) + " → " + day(times[t.exit]) +
+          " · return " + pct(t.ret) + " · vs EW " + pct(t.excess) +
+          " · weight " + pct(t.entryWeight) +
+          (t.peakWeight > t.entryWeight + 1e-9 ? " → peak " + pct(t.peakWeight) : "") +
+          " · " + t.sizeChanges + " size change" + (t.sizeChanges === 1 ? "" : "s") +
+          (t.handover != null ? " · before the handover " + pct(t.retBefore) + ", after " + pct(t.retAfter) : "") +
+          (t.overlap > 0 ? " · both books " + t.overlap.toFixed(1) + " d" : "")
+        ));
+        if (location.hash !== "#trade=" + i) history.replaceState(null, "", "#trade=" + i);
+      }
+
+      function setPeriod(key) {
+        const p = periods.find((q) => q.key === key) || periods[0];
+        periodEl.value = p.key;
+        range = [p.lo, p.hi];
+        listTrades();
+        drawEquity();
+      }
+
+      function drawScatter() {
+        const div = document.getElementById("scatter");
+        const kinds = data.types;
+        const traces = kinds.map((k, n) => {
+          const ts = trades.filter((t) => t.type === k);
+          return {
+            type: "scatter", mode: "markers", name: k,
+            x: ts.map((t) => Math.max(t.days, 1 / 24)),
+            y: ts.map((t) => (yField === "ret" ? t.ret : t.excess) * 100),
+            customdata: ts.map((t) => [t.i, t.asset, day(times[t.entry]), day(times[t.exit])]),
+            marker: { color: typeColour(k), size: 8, symbol: SYMBOLS[n % SYMBOLS.length], line: { color: "#161b22", width: 2 } },
+            hovertemplate: "%{customdata[1]} · " + k + "<br>%{customdata[2]} → %{customdata[3]}<br>%{x:.1f} days · %{y:.1f}%<extra></extra>",
+          };
+        });
+        const layout = Object.assign({}, LAYOUT, {
+          showlegend: true,
+          hovermode: "closest",
+          hoverdistance: 24,
+          margin: Object.assign({}, LAYOUT.margin, { t: 40 }),
+          legend: { orientation: "h", y: 1.02, yanchor: "bottom", x: 0, xanchor: "left" },
+          xaxis: Object.assign({}, LAYOUT.xaxis, { type: "log", title: { text: "Holding (calendar days)" } }),
+          yaxis: Object.assign({}, LAYOUT.yaxis, {
+            title: { text: yField === "ret" ? "Return (%)" : "Excess over the own-slate EW (%)" },
+            zeroline: true, zerolinecolor: "#30363d",
+          }),
+        });
+        Plotly.react(div, traces, layout, { responsive: true, displaylogo: false }).then(() => {
+          if (!div.dataset.bound) {
+            div.dataset.bound = "1";
+            div.on("plotly_click", (ev) => {
+              const pt = ev.points && ev.points[0];
+              if (!pt) return;
+              selectTrade(pt.customdata[0]);
+              chart.scrollIntoView({ behavior: "smooth", block: "center" });
+            });
+          }
+        });
+      }
+
+      function applyHash() {
+        const m = /^#trade=(\d+)$/.exec(location.hash);
+        if (m && trades[Number(m[1])]) selectTrade(Number(m[1]));
+        const p = /^#period=(.+)$/.exec(location.hash);
+        if (p) setPeriod(decodeURIComponent(p[1]));
+      }
+
+      Promise.all([
+        fetch("data.json").then((r) => { if (!r.ok) throw new Error("data.json: HTTP " + r.status); return r.json(); }),
+        loadPlotly(),
+      ]).then(([d]) => {
+        if (d.schema !== SCHEMA) throw new Error("data.json has schema " + d.schema + ", the page reads " + SCHEMA);
+        data = d;
+        times = decodeTime(data.time);
+        labels = times.map(iso);
+        trades = buildTrades();
+        periods = buildPeriods();
+        fillPeriodSelect();
+        statusEl.remove();
+        chart.hidden = false;
+        // A book of thousands of trades (an hourly crypto rotation) opens on its latest year, so
+        // the list stays readable; the period selector reaches every other.
+        const first = (trades.length > LIST_ALL_UP_TO && periods.find((p) => /^\d{4}$/.test(p.key))) || periods[0];
+        periodEl.value = first.key;
+        range = [first.lo, first.hi];
+        listTrades();
+        return drawEquity().then(() => {
+          chart.on("plotly_relayout", (ev) => {
+            if (selected !== null) return;
+            if (ev["xaxis.autorange"]) {
+              periodEl.value = "all";
+              range = [periods[0].lo, periods[0].hi];
+              listTrades();
+              return;
+            }
+            const a = ev["xaxis.range[0]"], b = ev["xaxis.range[1]"];
+            if (a === undefined || b === undefined) return;
+            range = [Date.parse(a.replace(" ", "T") + (a.length <= 10 ? "T00:00:00Z" : "Z")),
+                     Date.parse(b.replace(" ", "T") + (b.length <= 10 ? "T00:00:00Z" : "Z"))];
+            periodEl.value = "custom";
+            listTrades();
+          });
+          drawScatter();
+          applyHash();
+        });
+      }).catch((err) => {
+        statusEl.className = "error";
+        statusEl.textContent = "The page's data could not be loaded (" + err.message + "). " +
+          "It is fetched beside the page, so open the site over http(s), not as a local file.";
+      });
+
+      periodEl.addEventListener("change", () => { if (periodEl.value !== "custom") setPeriod(periodEl.value); });
+      backEl.addEventListener("click", () => {
+        history.replaceState(null, "", location.pathname);
+        drawEquity();
+        listTrades();
+      });
+      for (const b of document.querySelectorAll("button.y-axis")) {
+        b.addEventListener("click", () => {
+          yField = b.dataset.y;
+          for (const o of document.querySelectorAll("button.y-axis")) o.classList.toggle("on", o === b);
+          drawScatter();
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
